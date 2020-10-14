@@ -115,7 +115,7 @@ with open("english_trigrams.txt","r") as f:
 
 def strip_specials(s):
     t = s
-    for c in "'.,- ?\n()\"!/:;0123456789`":
+    for c in "°—'.,- ?\n()\"!/:;0123456789`":
         t = t.replace(c,"")
     return t
 

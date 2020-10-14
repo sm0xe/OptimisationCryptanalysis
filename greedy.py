@@ -114,6 +114,7 @@ if __name__ == "__main__":
             cand_key+=encryption[p]
         found_key,fit = greedy_search("".join(cand_key))
 
+        """
         decryption = {}
         for c,p in zip(found_key,"ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
             decryption[c] = p
@@ -126,10 +127,11 @@ if __name__ == "__main__":
             else:
                 print(c,end="")
         print("\n",end="")
+        """
         print("Found key {} with fitness {}".format(found_key,fit))
         print("Correct key is {} with fitness {}".format(correct_key,fitness(correct_key)))
-        print("Alphabet:    ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-        print("Found key:   {}".format(found_key))
+        print("Alphabet   : ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        print("Found key  : {}".format(found_key))
         print("Correct_key: {}".format(correct_key))
         print("           : ",end="")
         correct = 0
