@@ -58,7 +58,7 @@ def simple_permutations(key):
     for i in range(len(key)):
         for j in range(i+1,len(key)):
             new_cand = list(key)
-            new_cand[i],new_cand[j]= new_cand[j],new_cand[i]
+            new_cand[i],new_cand[j] = new_cand[j],new_cand[i]
             if "".join(new_cand) not in explored:
                 new_cands.append("".join(new_cand))
     return new_cands
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         correct_key,text = textfile.split("\n")[0],"\n".join(textfile.split("\n")[1:])
         size = len(text)
         m,d,t = statistics(text)
-        print(m)
+        print(sorted(m.keys()))
         #cand_key = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
         #shuffle(cand_key)
         cand_key=""
@@ -114,7 +114,6 @@ if __name__ == "__main__":
             cand_key+=encryption[p]
         found_key,fit = greedy_search("".join(cand_key))
 
-        """
         decryption = {}
         for c,p in zip(found_key,"ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
             decryption[c] = p
@@ -127,7 +126,6 @@ if __name__ == "__main__":
             else:
                 print(c,end="")
         print("\n",end="")
-        """
         print("Found key {} with fitness {}".format(found_key,fit))
         print("Correct key is {} with fitness {}".format(correct_key,fitness(correct_key)))
         print("Alphabet   : ABCDEFGHIJKLMNOPQRSTUVWXYZ")

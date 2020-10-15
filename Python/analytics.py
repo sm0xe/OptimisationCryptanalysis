@@ -2,7 +2,7 @@ import itertools
 expected_m = {}
 expected_d = {}
 expected_t = {}
-with open("english_monograms.txt","r") as f:
+with open("../Statistics/english_monograms.txt","r") as f:
     N = 0
     for line in f.readlines():
         key,count = line.split(" ")
@@ -10,7 +10,7 @@ with open("english_monograms.txt","r") as f:
         N = N+int(count)
     for key in ["".join(i) for i in itertools.product("ABCDEFGHIJKLMNOPQRSTUVWXYZ",repeat=1)]:
         expected_m[key] = float(expected_m[key])/N*100
-with open("english_bigrams.txt","r") as f:
+with open("../Statistics/english_bigrams.txt","r") as f:
     N = 0
     for line in f.readlines():
         key,count = line.split(" ")
@@ -18,7 +18,7 @@ with open("english_bigrams.txt","r") as f:
         N = N+int(count)
     for key in ["".join(i) for i in itertools.product("ABCDEFGHIJKLMNOPQRSTUVWXYZ",repeat=2)]:
         expected_d[key] = float(expected_d[key])/N*100
-with open("english_trigrams.txt","r") as f:
+with open("../Statistics/english_trigrams.txt","r") as f:
     N = 0
     for line in f.readlines():
         key,count = line.split(" ")
