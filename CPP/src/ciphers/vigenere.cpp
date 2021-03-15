@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <pagmo/types.hpp>
 
 using namespace std;
 
@@ -27,6 +28,23 @@ string vigenere_decrypt(string ciphertext, string key){
   for(int i=0; i<ciphertext.length(); i++){
     if(ciphertext[i]>='A' && ciphertext[i]<='Z'){
       plaintext[i] = (char) (26+ciphertext[i]-key[key_counter])%26+'A';
+      key_counter = (key_counter+1) % key_length;
+    }
+    else if(ciphertext[i]>='a' && ciphertext[i]<='z'){
+      plaintext[i] = (char) (26+ciphertext[i]-key[key_counter]+'A'-'a')%26+'a';
+      key_counter = (key_counter+1) % key_length;
+    }
+  }
+  return plaintext;
+}
+
+string vigenere_decrypt(string ciphertext, const pagmo::vector_double &key, int length){
+  string plaintext(ciphertext);
+  int key_counter = 0;
+  int key_length = length;
+  for(int i=0; i<ciphertext.length(); i++){
+    if(ciphertext[i]>='A' && ciphertext[i]<='Z'){
+      plaintext[i] = (char) (26+ciphertext[i]-key[key_counter]-'A')%26+'A';
       key_counter = (key_counter+1) % key_length;
     }
     else if(ciphertext[i]>='a' && ciphertext[i]<='z'){

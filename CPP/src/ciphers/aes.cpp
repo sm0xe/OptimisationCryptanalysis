@@ -1,9 +1,11 @@
+#include <iostream>
+#include <string>
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
-#include <iostream>
-#include <string>
+#include <cryptopp/files.h>
+#include <pagmo/types.hpp>
 
 using namespace CryptoPP;
 using std::cout;
@@ -51,7 +53,8 @@ std::string aes_decrypt(std::array<std::byte,AES::DEFAULT_KEYLENGTH> keyarray, s
         );
     StringSource decrypt_aes(ciphertext, true,
         new StreamTransformationFilter(d,
-          new StringSink(recovered)
+          new StringSink(recovered),
+          BlockPaddingSchemeDef::BlockPaddingScheme::NO_PADDING
           )
         );
     return recovered;
@@ -60,6 +63,14 @@ std::string aes_decrypt(std::array<std::byte,AES::DEFAULT_KEYLENGTH> keyarray, s
     cerr << d.what() << endl;
     exit(1);
   }
+}
+
+std::string aes_decrypt(const pagmo::vector_double &dv, std::string encoded){
+  std::array<std::byte,AES::DEFAULT_KEYLENGTH> key;
+  for(int i=0; i<dv.size(); i++){
+    key[i] = (std::byte) dv[i];
+  }
+  return aes_decrypt(key,encoded);
 }
 
 void test_aes(std::array<std::byte,AES::DEFAULT_KEYLENGTH> keyarray){

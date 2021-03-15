@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <set>
+#include <pagmo/types.hpp>
 
 using namespace std;
 
@@ -98,6 +99,13 @@ string playfair_decrypt(string ciphertext, string key){
     }
   }
   return(plaintext);
+}
+string playfair_decrypt(string ciphertext, const pagmo::vector_double &dv){
+  string key="";
+  for(auto i : dv){
+    key+=(char)i+'A';
+  }
+  return playfair_decrypt(ciphertext, key);
 }
 
 bool test_playfair(){

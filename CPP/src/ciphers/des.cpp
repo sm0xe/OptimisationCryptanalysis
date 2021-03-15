@@ -1,9 +1,10 @@
+#include <iostream>
+#include <string>
 #include <cryptopp/des.h>
 #include <cryptopp/modes.h>
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
-#include <iostream>
-#include <string>
+#include <pagmo/types.hpp>
 
 using namespace CryptoPP;
 using std::cout;
@@ -17,8 +18,7 @@ std::string des_encrypt(std::array<std::byte,DES::DEFAULT_KEYLENGTH> keyarray, s
   std::string encoded, cipher;
 
   try{
-    ECB_Mode<DES>::Encryption e;
-    e.SetKey(key, key.size());
+    ECB_Mode<DES>::Encryption e(key, key.size());
 
     StringSource encrypt_des(plaintext, true,
         new StreamTransformationFilter(e,
@@ -46,8 +46,7 @@ std::string des_decrypt(std::array<std::byte,DES::DEFAULT_KEYLENGTH> keyarray, s
   std::string ciphertext, recovered;
 
   try{
-    ECB_Mode<DES>::Decryption d;
-    d.SetKey(key, key.size());
+    ECB_Mode<DES>::Decryption d(key, key.size());
     StringSource decode_hex(encoded, true,
         new HexDecoder(
           new StringSink(ciphertext)
@@ -55,7 +54,8 @@ std::string des_decrypt(std::array<std::byte,DES::DEFAULT_KEYLENGTH> keyarray, s
         );
     StringSource decrypt_des(ciphertext, true,
         new StreamTransformationFilter(d,
-          new StringSink(recovered)
+          new StringSink(recovered),
+          BlockPaddingSchemeDef::BlockPaddingScheme::NO_PADDING
           )
         );
     return recovered;
@@ -66,6 +66,14 @@ std::string des_decrypt(std::array<std::byte,DES::DEFAULT_KEYLENGTH> keyarray, s
   }
 }
 
+std::string des_decrypt(const pagmo::vector_double &dv,std::string encoded){
+  std::array<std::byte,DES::DEFAULT_KEYLENGTH> key;
+  for(int i=0; i<dv.size(); i++){
+    key[i]=(std::byte) dv[i];
+  }
+  return des_decrypt(key,encoded);
+}
+
 void test_des(std::array<std::byte,DES::DEFAULT_KEYLENGTH> keyarray){
 
   std::string plain = "ECB Mode Test";
@@ -74,5 +82,5 @@ void test_des(std::array<std::byte,DES::DEFAULT_KEYLENGTH> keyarray){
   cout << "ciphertext: " << encoded << endl;
 
   std::string recovered = des_decrypt(keyarray, encoded);
-  cout << "recoveredtext: " << recovered<< endl;
+  cout << "recovered text: " << recovered<< endl;
 }

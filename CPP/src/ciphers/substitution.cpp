@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <pagmo/types.hpp>
 
 using namespace std;
 
@@ -17,6 +18,14 @@ string substitute(string orig, string key){
     }
   }
   return substituted;
+}
+
+string substitute(string orig, const pagmo::vector_double &dv){
+  string key="";
+  for(auto i : dv){
+    key+=(char)i+'A';
+  }
+  return substitute(orig,key);
 }
 
 bool test_substitutions(){
