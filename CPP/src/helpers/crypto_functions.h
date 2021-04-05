@@ -5,6 +5,9 @@
 
 std::map<char,int> get_monogram_frequencies(std::string ciphertext); // from analysis.cpp
 std::map<std::string,int> get_digram_frequencies(std::string ciphertext); // from analysis.cpp
+std::map<std::string,int> get_trigram_frequencies(std::string ciphertext); // from analysis.cpp
+
+unsigned int count_equal_bits(pagmo::vector_double,std::vector<std::byte>); // from keychecker.cpp
 
 std::string int_to_hex(int n); // from hexifier.cpp
 
@@ -14,8 +17,10 @@ std::string substitute(std::string orig, const pagmo::vector_double &dv);
 
 bool test_vigenere(); //from vigenere.cpp
 std::string vigenere_decrypt(std::string ciphertext, const pagmo::vector_double &dv, int length);
+//std::string vigenere_decrypt(std::string ciphertext, std::string);
 
 bool test_playfair(); //from playfair.cpp
+std::string playfair_encrypt(std::string plaintext, std::string key);
 std::string playfair_decrypt(std::string ciphertext, std::string key);
 std::string playfair_decrypt(std::string ciphertext, const pagmo::vector_double &dv);
 

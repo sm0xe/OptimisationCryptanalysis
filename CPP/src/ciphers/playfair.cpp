@@ -42,6 +42,7 @@ struct playfair_table generate_playfair_table(string key){
 }
 
 string playfair_encrypt(string plaintext, string key){
+  
   string ciphertext;
   for(int i=0; i<plaintext.length();i+=2){
     char first = plaintext[i];
