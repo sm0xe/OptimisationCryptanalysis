@@ -2,6 +2,11 @@
 #include <cryptopp/aes.h>
 #include <cryptopp/rsa.h>
 #include <cryptopp/speck.h>
+#include "boost/multiprecision/cpp_int.hpp"
+
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<4096, 4096, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void> >  int4096_t;
+
+int4096_t gcd(int4096_t a, int4096_t b);
 
 std::map<char,int> get_monogram_frequencies(std::string ciphertext); // from analysis.cpp
 std::map<std::string,int> get_digram_frequencies(std::string ciphertext); // from analysis.cpp
@@ -14,6 +19,7 @@ std::string int_to_hex(int n); // from hexifier.cpp
 bool test_substitutions(); //from substitution.cpp
 std::string substitute(std::string orig, std::string key);
 std::string substitute(std::string orig, const pagmo::vector_double &dv);
+std::string dv_to_msub_key(const pagmo::vector_double &dv); // from substitution.cpp
 
 bool test_vigenere(); //from vigenere.cpp
 std::string vigenere_decrypt(std::string ciphertext, const pagmo::vector_double &dv, int length);
@@ -23,6 +29,7 @@ bool test_playfair(); //from playfair.cpp
 std::string playfair_encrypt(std::string plaintext, std::string key);
 std::string playfair_decrypt(std::string ciphertext, std::string key);
 std::string playfair_decrypt(std::string ciphertext, const pagmo::vector_double &dv);
+std::string dv_to_pf_key(const pagmo::vector_double &dv); // from playfair.cpp
 
 void test_des(std::array<std::byte,CryptoPP::DES::DEFAULT_KEYLENGTH> keyarray); //from des.cpp
 std::string des_encrypt(std::array<std::byte,CryptoPP::DES::DEFAULT_KEYLENGTH> keyarray,std::string plaintext); //from des.cpp

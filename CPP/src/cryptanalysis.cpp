@@ -15,6 +15,7 @@
 #include <cryptopp/speck.h>
 
 #include <pagmo/algorithm.hpp>
+#include <pagmo/algorithms/sga.hpp>
 #include <pagmo/algorithms/de1220.hpp>
 #include <pagmo/algorithms/sade.hpp>
 #include <pagmo/algorithms/simulated_annealing.hpp>
@@ -27,14 +28,14 @@
 #include <pagmo/types.hpp>
 
 //#define DEBUG
-#define GENERATIONS 100000000
-#define POP_SIZE 100000
+#define GENERATIONS 1000000
+#define POP_SIZE 10000
 using namespace std;
 
 const char* prog_name;
 
 enum cipher_choice {nocipher,msub,vigenere,playfair,sdes,four_des,des,simple_aes,aes,rsa_fact,rsa,speck} cipher=nocipher;
-enum optimization_choice {none,de,sa,pso,ant,bee,cuckoo} optimize=none;
+enum optimization_choice {none,ga,de,sa,pso,ant,bee,cuckoo} optimize=none;
 
 void print_usage(int exit_code){
   cout << "Usage: " << prog_name << " options [ args ... ]\n";
@@ -61,7 +62,8 @@ void list_options(){
   //cout << "  Ciphertext-only RSA (rsa)" << endl;
   cout << "  SPECK (speck)" << endl;
   cout << "Supported optimization algorithms/schemes:" << endl;
-  cout << "  Differential Evolution/Genetic Algorithm (de)" << endl;
+  cout << "  Simple Genetic Algorithm (ga)" << endl;
+  cout << "  Differential Evolution (de)" << endl;
   cout << "  Simulated Annealing (sa)" << endl;
   cout << "  Particle Swarm Optimization (particle)" << endl;
   cout << "  Ant Colony Optimization (ant)" << endl;
@@ -108,13 +110,16 @@ void select_cipher(string opt){
 }
 
 void select_optimization(string opt){
-  if(opt == "de"){
+  if(opt == "ga"){
+    optimize = ga;
+  }
+  else if(opt == "de"){
     optimize = de;
   }
   else if(opt == "sa"){
     optimize = sa;
   }
-  else if(opt == "particle"){
+  else if(opt == "particle" || opt == "pso"){
     optimize = pso;
   }
   else if(opt == "ant"){
@@ -253,12 +258,16 @@ int main(int argc, char* argv[]){
     opt_problem = pagmo::problem{speck_generic{.ciphertext=ciphertext}};
   }
 
+  if(optimize == ga){
+    cout << "Simple Genetic Algorithm";
+    pagmo::algorithm opt_algo{pagmo::sga(GENERATIONS,.9,1,0.02,1,5u,"exponential","uniform","tournament")};
+  }
   if(optimize == de){
     cout << "Differential Evolution";
-    vector<unsigned> allowed = {9u};
+    vector<unsigned> allowed = {6u,7u,8u,9u,10u,12u,14u,16u,18u};
     pagmo::algorithm opt_algo{pagmo::de1220(GENERATIONS)};
     //pagmo::algorithm opt_algo{pagmo::de1220(GENERATIONS,allowed)};
-    //pagmo::algorithm opt_algo{pagmo::sade(GENERATIONS,9)};
+    //pagmo::algorithm opt_algo{pagmo::sade(GENERATIONS)};
   }
   if(optimize == sa){
     cout << "Simulated Annealing";
@@ -289,7 +298,7 @@ int main(int argc, char* argv[]){
   pagmo::population pop(opt_problem,POP_SIZE);
   if(cipher == msub){
     //pop.push_back(pagmo::vector_double({'C'-'A', 'B'-'A', 'R'-'A', 'S'-'A', 'T'-'A', 'F'-'A', 'U'-'A', 'Z'-'A', 'N'-'A', 'D'-'A', 'O'-'A', 'I'-'A', 'K'-'A', 'A'-'A', 'G'-'A', 'L'-'A', 'W'-'A', 'V'-'A', 'X'-'A', 'Y'-'A', 'P'-'A', 'Q'-'A', 'H'-'A', 'M'-'A', 'E'-'A', 'J'-'A'}));
-    //pop.push_back(pagmo::vector_double({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}));
+    pop.push_back(pagmo::vector_double({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}));
   }
   if(cipher == vigenere){
     //pop.push_back(pagmo::vector_double({9,20,11,4,18}));
@@ -320,6 +329,13 @@ int main(int argc, char* argv[]){
     }
   }
   cout << endl;
+  if(cipher == msub){
+    cout << endl << "msub key: " << dv_to_msub_key(best) << endl;
+  }
+  if(cipher == playfair){
+    cout << endl << "playfair key: " << dv_to_pf_key(best) << endl;
+  }
+  /*
   if(cipher == msub || cipher == playfair){
     for(int i=0; i<best.size(); i++){
       bool found = false;
@@ -338,8 +354,10 @@ int main(int argc, char* argv[]){
       }
       cout << "  ";
     }
+  }*/
+  if(cipher != rsa_fact){
+    cout << "Key: " << keystring << endl << endl;
   }
-  cout << endl << "Key: " << keystring << endl;
   string plaintext;
   unsigned int correct;
   if(cipher == msub){
@@ -368,7 +386,19 @@ int main(int argc, char* argv[]){
     array<byte,CryptoPP::SPECK64::DEFAULT_KEYLENGTH> speck_key = { (byte) 0xde, (byte) 0xad, (byte) 0xbe, (byte) 0xef, (byte) 0xba, (byte) 0xbe, (byte) 0x13, (byte) 0x37, (byte) 0xfe, (byte) 0xed, (byte) 0x7a, (byte) 0xbe };
     correct = count_equal_bits(best,vector<std::byte>(speck_key.begin(),speck_key.end()));
     cout << "Correct: " << correct << "/96 bits" << endl;
-    //cout << "Sanity test: " << sanity_test(vector<std::byte>(speck_key.begin(),speck_key.end()),vector<std::byte>(speck_key.begin(),speck_key.end())) << endl;
+  }
+  if(cipher == rsa_fact){
+    cout << "ensure_sum_equality: " << pop.champion_f()[1] << " ensure_inequality: " << pop.champion_f()[2] << " ensure_non_trivial: " << pop.champion_f()[3] << endl;
+    if(pop.champion_f()[0]==0){
+      int4096_t x = 1;
+      int4096_t y = 1;
+      for(int i=0; i<PRIME_BASE_SIZE; i++){
+        x=x * (int4096_t)pow(rsa_prime_base[i],best[i]);
+        y=y * (int4096_t)pow(rsa_prime_base[i],best[i+PRIME_BASE_SIZE]);
+      }
+      std::cout << "gcd(" << y << "-" << x << "," << ciphertext << ")=" << gcd((long long int) y-(long long int) x,int4096_t(ciphertext)) << std::endl;
+      std::cout << "gcd(" << y << "+" << x << "," << ciphertext << ")=" << gcd((long long int) y+(long long int) x,int4096_t(ciphertext)) << std::endl;
+    }
   }
 
   if(cipher == msub || cipher == vigenere || cipher == playfair){

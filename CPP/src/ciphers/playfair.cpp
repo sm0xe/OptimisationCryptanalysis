@@ -101,11 +101,32 @@ string playfair_decrypt(string ciphertext, string key){
   }
   return(plaintext);
 }
-string playfair_decrypt(string ciphertext, const pagmo::vector_double &dv){
+string dv_to_pf_key(const pagmo::vector_double &dv){
+  set<char> used;
+  used.insert('J');
+  int count=0;
   string key="";
   for(auto i : dv){
-    key+=(char)i+'A';
+    char c = (char)i + 'A';
+    if(used.find(c)==used.end()){
+      key+=c;
+      used.insert(c);
+    }
+    else{
+      for(;count<26;count++){
+        char c = (char)count + 'A';
+        if(used.find(c)==used.end()){
+          key+=c;
+          used.insert(c);
+        }
+      }
+    }
   }
+  return key;
+}
+
+string playfair_decrypt(string ciphertext, const pagmo::vector_double &dv){
+  string key = dv_to_pf_key(dv);
   return playfair_decrypt(ciphertext, key);
 }
 

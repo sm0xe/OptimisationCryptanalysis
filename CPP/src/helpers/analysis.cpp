@@ -7,7 +7,6 @@
 //#include "trigrams.hpp"
 using namespace std;
 
-
 map<char,int> get_monogram_frequencies(string ciphertext){
   int freqs[26] = {0};
   map<char,int> monogram_frequency;

@@ -4,15 +4,22 @@
 #include <set>
 #include "crypto_functions.h"
 #include <iostream>
-#include "boost/multiprecision/cpp_int.hpp"
 
-#define PRIME_BASE_SIZE 10
+#define PRIME_BASE_SIZE 12
 
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<4096, 4096, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void> >  int4096_t;
-
-const int rsa_prime_base[PRIME_BASE_SIZE] = {2,3,5,7,11,13,17,19,23,29};
+const int rsa_prime_base[PRIME_BASE_SIZE] = {2,3,5,7,11,13,17,19,23,29,31,37};
 double chi_squared(int length, std::map<char,int> monograms, std::map<std::string,int> digrams);
 double chi_squared_playfair(int length, std::map<char,int> monograms, std::map<std::string,int> digrams);
+
+int4096_t gcd(int4096_t a, int4096_t b){
+  if (!a) return b;
+  return gcd(b%a,a);
+}
+
+
+double known_plaintext(std::string known, std::string plaintext){
+  return plaintext.find(known)==-1;
+}
 
 double index_of_coincidence(long int n, std::map<char,int> monograms){
   double sum=0;
@@ -59,6 +66,14 @@ double evaluate_playfair(std::string plaintext){
   return index_of_coincidence(plaintext.size(),m);
 }
 
+int4096_t prime_vector_to_int(const pagmo::vector_double &dv,int offset){
+  int4096_t x = 1;
+  for(int i=0; i<PRIME_BASE_SIZE; i++){
+    x=x * (int4096_t)pow(rsa_prime_base[i],dv[i+offset]);
+  }
+  return x;
+}
+
 double rsa_fitness(const pagmo::vector_double &dv, int4096_t n){
   int4096_t x = 1;
   int4096_t y = 1;
@@ -80,6 +95,17 @@ double ensure_sum_inequality(const pagmo::vector_double &dv, int4096_t n){
   return (x+y==n);
 }
 
+double ensure_non_trivial(const pagmo::vector_double &dv, int4096_t n){
+  int4096_t x = 1;
+  int4096_t y = 1;
+  for(int i=0; i<PRIME_BASE_SIZE; i++){
+    x=x*(int4096_t)pow(rsa_prime_base[i],dv[i]);
+    y=y*(int4096_t)pow(rsa_prime_base[i],dv[i+PRIME_BASE_SIZE]);
+  }
+  return gcd(x+y,n)==1 || gcd(y-x,n)==1;
+}
+
+
 double ensure_inequality(const pagmo::vector_double &dv, int4096_t n){
   int4096_t x = 1;
   int4096_t y = 1;
@@ -95,13 +121,13 @@ double ensure_inequality(const pagmo::vector_double &dv, int4096_t n){
   return (double)(y<x);
 }
 
-struct msub_generic {
+struct shift_generic {
   std::string ciphertext;
   pagmo::vector_double::size_type get_nix() const{
-    return 26;
+    return 1;
   }
   pagmo::vector_double::size_type get_nec() const{
-    return 25;
+    return 0;
   }
   pagmo::vector_double::size_type get_nic() const{
     return 0;
@@ -109,6 +135,30 @@ struct msub_generic {
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
       evaluate(substitute(ciphertext,dv)),
+    };
+  }
+  std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
+    return {
+      pagmo::vector_double(1,0),pagmo::vector_double(1,25),
+    };
+  }
+};
+
+struct msub_generic {
+  std::string ciphertext;
+  pagmo::vector_double::size_type get_nix() const{
+    return 26;
+  }
+  pagmo::vector_double::size_type get_nec() const{
+    return 0;
+  }
+  pagmo::vector_double::size_type get_nic() const{
+    return 0;
+  }
+  pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
+    return {
+      evaluate(substitute(ciphertext,dv)),
+      /*
       double(dv[0]==dv[1] || dv[0]==dv[2] || dv[0]==dv[3] || dv[0]==dv[4] || dv[0]==dv[5] || dv[0]==dv[6] || dv[0]==dv[7] || dv[0]==dv[8] || dv[0]==dv[9] || dv[0]==dv[10] || dv[0]==dv[11] || dv[0]==dv[12] || dv[0]==dv[13] || dv[0]==dv[14] || dv[0]==dv[15] || dv[0]==dv[16] || dv[0]==dv[17] || dv[0]==dv[18] || dv[0]==dv[19] || dv[0]==dv[20] || dv[0]==dv[21] || dv[0]==dv[22] || dv[0]==dv[23] || dv[0]==dv[24] || dv[0]==dv[25]),
 
       double(dv[1]==dv[2] || dv[1]==dv[3] || dv[1]==dv[4] || dv[1]==dv[5] || dv[1]==dv[6] || dv[1]==dv[7] || dv[1]==dv[8] || dv[1]==dv[9] || dv[1]==dv[10] || dv[1]==dv[11] || dv[1]==dv[12] || dv[1]==dv[13] || dv[1]==dv[14] || dv[1]==dv[15] || dv[1]==dv[16] || dv[1]==dv[17] || dv[1]==dv[18] || dv[1]==dv[19] || dv[1]==dv[20] || dv[1]==dv[21] || dv[1]==dv[22] || dv[1]==dv[23] || dv[1]==dv[24] || dv[1]==dv[25]),
@@ -158,6 +208,7 @@ struct msub_generic {
       double(dv[23]==dv[24] || dv[23]==dv[25]),
 
       double(dv[24]==dv[25])
+      */
     };
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
@@ -174,7 +225,7 @@ struct vigenere_generic {
     return 5;
   }
   pagmo::vector_double::size_type get_nec() const{
-    return 0;
+    return 1;
   }
   pagmo::vector_double::size_type get_nic() const{
     return 0;
@@ -182,6 +233,7 @@ struct vigenere_generic {
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
       evaluate(vigenere_decrypt(ciphertext,dv,key_length)),
+      known_plaintext("YEAR",vigenere_decrypt(ciphertext,dv,key_length))
     };
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
@@ -197,7 +249,7 @@ struct playfair_generic {
     return 25;
   }
   pagmo::vector_double::size_type get_nec() const{
-    return 24;
+    return 0;
   }
   pagmo::vector_double::size_type get_nic() const{
     return 0;
@@ -205,7 +257,7 @@ struct playfair_generic {
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
       evaluate_playfair(playfair_decrypt(ciphertext,dv)),
-
+      /*
       double(dv[0]==9 || dv[0]==dv[1] || dv[0]==dv[2] || dv[0]==dv[3] || dv[0]==dv[4] || dv[0]==dv[5] || dv[0]==dv[6] || dv[0]==dv[7] || dv[0]==dv[8] || dv[0]==dv[9] || dv[0]==dv[10] || dv[0]==dv[11] || dv[0]==dv[12] || dv[0]==dv[13] || dv[0]==dv[14] || dv[0]==dv[15] || dv[0]==dv[16] || dv[0]==dv[17] || dv[0]==dv[18] || dv[0]==dv[19] || dv[0]==dv[20] || dv[0]==dv[21] || dv[0]==dv[22] || dv[0]==dv[23] || dv[0]==dv[24]),
 
       double(dv[1]==9 || dv[1]==dv[2] || dv[1]==dv[3] || dv[1]==dv[4] || dv[1]==dv[5] || dv[1]==dv[6] || dv[1]==dv[7] || dv[1]==dv[8] || dv[1]==dv[9] || dv[1]==dv[10] || dv[1]==dv[11] || dv[1]==dv[12] || dv[1]==dv[13] || dv[1]==dv[14] || dv[1]==dv[15] || dv[1]==dv[16] || dv[1]==dv[17] || dv[1]==dv[18] || dv[1]==dv[19] || dv[1]==dv[20] || dv[1]==dv[21] || dv[1]==dv[22] || dv[1]==dv[23] || dv[1]==dv[24]),
@@ -253,6 +305,7 @@ struct playfair_generic {
       double(dv[22]==9 || dv[22]==dv[23] || dv[22]==dv[24]),
 
       double(dv[23]==9 || dv[23]==dv[24])
+      */
 
     };
   }
@@ -295,13 +348,16 @@ struct rsa_factor {
     return 2;
   }
   pagmo::vector_double::size_type get_nic() const{
-    return 0;
+    return 2;
   }
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
       rsa_fitness(dv,n), //objective function
       ensure_sum_inequality(dv,n), //(x+y!=n)
-      ensure_inequality(dv,n) //inequality constraint (x<y)
+      ensure_non_trivial(dv,n),
+      double(prime_vector_to_int(dv,0)-n),
+      double(prime_vector_to_int(dv,PRIME_BASE_SIZE)-n),
+      //ensure_inequality(dv,n), //inequality constraint (x<y)
     };
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{

@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <pagmo/types.hpp>
+#include <set>
 
 using namespace std;
 
@@ -20,11 +21,31 @@ string substitute(string orig, string key){
   return substituted;
 }
 
-string substitute(string orig, const pagmo::vector_double &dv){
+string dv_to_msub_key(const pagmo::vector_double &dv){
+  set<char> used;
+  int count=0;
   string key="";
   for(auto i : dv){
-    key+=(char)i+'A';
+    char c = (char)i+'A';
+    if(used.find(c)==used.end()){
+      key+=c;
+      used.insert(c);
+    }
+    else{
+      for(;count<26;count++){
+        char c = (char)count+'A';
+        if(used.find(c)==used.end()){
+          key+=c;
+          used.insert(c);
+        }
+      }
+    }
   }
+  return key;
+}
+
+string substitute(string orig, const pagmo::vector_double &dv){
+  string key = dv_to_msub_key(dv);
   return substitute(orig,key);
 }
 
