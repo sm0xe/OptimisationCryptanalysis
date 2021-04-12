@@ -122,6 +122,14 @@ string dv_to_pf_key(const pagmo::vector_double &dv){
       }
     }
   }
+  while(count<26){
+    char c = (char)count + 'A';
+    if(used.find(c)==used.end()){
+      key+=c;
+      used.insert(c);
+    }
+    count++;
+  }
   return key;
 }
 

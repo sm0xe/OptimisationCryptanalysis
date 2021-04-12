@@ -34,7 +34,7 @@ using namespace std;
 
 const char* prog_name;
 
-enum cipher_choice {nocipher,msub,vigenere,playfair,sdes,four_des,des,simple_aes,aes,rsa_fact,rsa,speck} cipher=nocipher;
+enum cipher_choice {nocipher,caesar,msub,vigenere,playfair,sdes,four_des,des,simple_aes,aes,rsa_fact,rsa,speck} cipher=nocipher;
 enum optimization_choice {none,ga,de,sa,pso,ant,bee,cuckoo} optimize=none;
 
 void print_usage(int exit_code){
@@ -50,6 +50,7 @@ void print_usage(int exit_code){
 
 void list_options(){
   cout << "Supported ciphers:" << endl;
+  cout << "  Caesar/Shift Cipher (caesar)" << endl;
   cout << "  Monoalphabetic Substitution Cipher (msub)" << endl;
   cout << "  Vigenere Cipher (vigenere)" << endl;
   cout << "  Playfair Cipher (playfair)" << endl;
@@ -73,7 +74,10 @@ void list_options(){
 }
 
 void select_cipher(string opt){
-  if(opt == "msub"){
+  if(opt == "caesar"){
+    cipher = caesar;
+  }
+  else if(opt == "msub"){
     cipher = msub;
   }
   else if(opt == "vigenere"){
@@ -208,7 +212,11 @@ int main(int argc, char* argv[]){
   */
 
 
-  if(cipher == msub){
+  if(cipher == caesar){
+    cout << "You chose the Caesar/Shift Cipher with ";
+    opt_problem = pagmo::problem{shift_generic{.ciphertext=ciphertext}};
+  }
+  else if(cipher == msub){
     cout << "You chose the Monoalphabetic Substitution Cipher with ";
     opt_problem = pagmo::problem{msub_generic{.ciphertext=ciphertext}};
 #ifdef DEBUG
@@ -298,14 +306,15 @@ int main(int argc, char* argv[]){
   pagmo::population pop(opt_problem,POP_SIZE);
   if(cipher == msub){
     //pop.push_back(pagmo::vector_double({'C'-'A', 'B'-'A', 'R'-'A', 'S'-'A', 'T'-'A', 'F'-'A', 'U'-'A', 'Z'-'A', 'N'-'A', 'D'-'A', 'O'-'A', 'I'-'A', 'K'-'A', 'A'-'A', 'G'-'A', 'L'-'A', 'W'-'A', 'V'-'A', 'X'-'A', 'Y'-'A', 'P'-'A', 'Q'-'A', 'H'-'A', 'M'-'A', 'E'-'A', 'J'-'A'}));
-    pop.push_back(pagmo::vector_double({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}));
+    //pop.push_back(pagmo::vector_double({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}));
   }
   if(cipher == vigenere){
     //pop.push_back(pagmo::vector_double({9,20,11,4,18}));
   }
   if(cipher == playfair){
     //pop.push_back(pagmo::vector_double({15,11,0,24,5,8,17,4,23,12,1,2,3,6,7,10,13,14,16,18,19,20,21,22,25}));
-    pop.push_back(pagmo::vector_double({0,1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}));
+    //pop.push_back(pagmo::vector_double({15,11,0,24,5,8,17,4,23,12}));
+    //pop.push_back(pagmo::vector_double({0,1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}));
   }
 
   pop = opt_algo.evolve(pop);
@@ -329,6 +338,9 @@ int main(int argc, char* argv[]){
     }
   }
   cout << endl;
+  if(cipher == caesar){
+    cout << endl << "msub key: " << shift_to_msub_key(best[0]) << endl;
+  }
   if(cipher == msub){
     cout << endl << "msub key: " << dv_to_msub_key(best) << endl;
   }
@@ -360,6 +372,9 @@ int main(int argc, char* argv[]){
   }
   string plaintext;
   unsigned int correct;
+  if(cipher == caesar){
+    plaintext = substitute(ciphertext,shift_to_msub_key(best[0]));
+  }
   if(cipher == msub){
     plaintext = substitute(ciphertext,best);
   }
@@ -401,7 +416,7 @@ int main(int argc, char* argv[]){
     }
   }
 
-  if(cipher == msub || cipher == vigenere || cipher == playfair){
+  if(cipher == caesar || cipher == msub || cipher == vigenere || cipher == playfair){
     cout << plaintext.substr(0,500) << endl;
   }
   

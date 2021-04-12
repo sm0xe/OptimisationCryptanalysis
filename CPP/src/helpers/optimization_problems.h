@@ -121,6 +121,19 @@ double ensure_inequality(const pagmo::vector_double &dv, int4096_t n){
   return (double)(y<x);
 }
 
+std::string shift_to_msub_key(int n){
+  std::string key="";
+  for(int i=n; i<26; i++){
+    char c = (char)i+'A';
+    key+=c;
+  }
+  for(int i=0; i<n; i++){
+    char c = (char)i+'A';
+    key+=c;
+  }
+  return key;
+}
+
 struct shift_generic {
   std::string ciphertext;
   pagmo::vector_double::size_type get_nix() const{
@@ -134,7 +147,7 @@ struct shift_generic {
   }
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
-      evaluate(substitute(ciphertext,dv)),
+      evaluate(substitute(ciphertext,shift_to_msub_key(dv[0]))),
     };
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
@@ -246,7 +259,7 @@ struct vigenere_generic {
 struct playfair_generic {
   std::string ciphertext;
   pagmo::vector_double::size_type get_nix() const{
-    return 25;
+    return 15;
   }
   pagmo::vector_double::size_type get_nec() const{
     return 0;
@@ -311,7 +324,7 @@ struct playfair_generic {
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
     return {
-      pagmo::vector_double(25,0),pagmo::vector_double(25,25),
+      pagmo::vector_double(15,0),pagmo::vector_double(15,25),
     };
   }
 };

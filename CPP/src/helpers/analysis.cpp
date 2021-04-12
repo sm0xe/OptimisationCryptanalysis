@@ -111,7 +111,7 @@ double chi_squared_playfair(int length, map<char,int> monograms){
     if(m.first=='X') continue;
     double ei = length*m.second*0.01;
     double chi_chi = pow(monograms[m.first]-ei,2.0)/(ei);
-    sum+=chi_chi*1.0;
+    sum+=chi_chi*.5;
   }
   return sum;
 }
@@ -121,7 +121,7 @@ double chi_squared(int length, map<char,int> monograms, map<string,int> digrams)
   for(auto d : expected_d){
     double ei = length*d.second*0.01;
     double chi_chi = pow(digrams[d.first]-ei,2)/(ei);
-    sum+=chi_chi*1.0;
+    sum+=chi_chi*.5;
   }
   return sum+chi_squared(length,monograms);
 }
@@ -132,9 +132,9 @@ double chi_squared_playfair(int length, map<char,int> monograms, map<string,int>
     if(d.first[0]=='X' || d.first[1]=='X') continue;
     double ei = length*d.second*0.01;
     double chi_chi = pow(digrams[d.first]-ei,2)/(ei);
-    sum+=chi_chi*1.0;
+    sum+=chi_chi*.5;
   }
-  return sum+chi_squared(length,monograms);
+  return sum+chi_squared_playfair(length,monograms);
 }
 
 #ifdef TRIGRAMS_H
@@ -143,7 +143,7 @@ double chi_squared(int length, map<char,int> monograms, map<string,int> digrams,
   for(auto t : expected_t){
     double ei = length*t.second*0.01;
     double chi_chi = pow(trigrams[t.first]-ei,2)/(ei);
-    sum+=chi_chi*1.0;
+    sum+=chi_chi*.5;
   }
   return sum+chi_squared(length,monograms,digrams);
 }
