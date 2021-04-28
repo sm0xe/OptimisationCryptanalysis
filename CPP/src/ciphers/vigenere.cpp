@@ -44,11 +44,11 @@ string vigenere_decrypt(string ciphertext, const pagmo::vector_double &key, int 
   int key_length = length;
   for(int i=0; i<ciphertext.length(); i++){
     if(ciphertext[i]>='A' && ciphertext[i]<='Z'){
-      plaintext[i] = (char) (26+ciphertext[i]-key[key_counter]-'A')%26+'A';
+      plaintext[i] = (char) (26+ciphertext[i]-int(key[key_counter])-'A')%26+'A';
       key_counter = (key_counter+1) % key_length;
     }
     else if(ciphertext[i]>='a' && ciphertext[i]<='z'){
-      plaintext[i] = (char) (26+ciphertext[i]-key[key_counter]+'A'-'a')%26+'a';
+      plaintext[i] = (char) (26+ciphertext[i]-int(key[key_counter])+'A'-'a')%26+'a';
       key_counter = (key_counter+1) % key_length;
     }
   }

@@ -4,9 +4,13 @@
 #include <cmath>
 #include "monograms.hpp"
 #include "digrams.hpp"
-//#include "trigrams.hpp"
-using namespace std;
+#include "trigrams.hpp"
 
+#define UNIGRAM_WEIGHT 0.1
+#define DIGRAM_WEIGHT 0.1
+#define TRIGRAM_WEIGHT 0.8
+
+using namespace std;
 map<char,int> get_monogram_frequencies(string ciphertext){
   int freqs[26] = {0};
   map<char,int> monogram_frequency;
@@ -93,58 +97,153 @@ map<string,int> get_trigram_frequencies(string ciphertext){
   return trigram_frequency;
 }
 
+double van_vuuren(long int n, std::map<char,int> monograms){
+  double sum=0;
+  double p_min = 1e10;
+  for(int i=0; i<26; i++){
+    double expected = (double)n*expected_m[i]*0.01;
+    if(p_min>expected) p_min=expected;
+    sum+=abs(expected-monograms[i]);
+  }
+  return (2*((double)n-p_min)-sum)/(2*((double)n-p_min));
+}
+
 double chi_squared(int length, map<char,int> monograms){
   //cout << "Length: " << length << endl;
   double sum = 0.0;
-  for(auto m : expected_m){
-    double ei = length*m.second*0.01;
-    double chi_chi = pow(monograms[m.first]-ei,2.0)/(ei);
-    sum+=chi_chi*1.0;
+  for(int i=0; i<26; i++){
+    double ei = (double)length*expected_m[i]*0.01;
+    double chi_chi = pow(monograms[i]-ei,2.0)/(ei);
+    sum+=(chi_chi*UNIGRAM_WEIGHT);
   }
   return sum;
 }
 
 double chi_squared_playfair(int length, map<char,int> monograms){
-  //cout << "Length: " << length << endl;
   double sum = 0.0;
-  for(auto m : expected_m){
-    if(m.first=='X') continue;
-    double ei = length*m.second*0.01;
-    double chi_chi = pow(monograms[m.first]-ei,2.0)/(ei);
-    sum+=chi_chi*.5;
+  for(int i=0; i<26; i++){
+    if(i+'A'=='X') continue;
+    double ei = (double)length*expected_m[i]*0.01;
+    double chi_chi = pow(monograms[i]-ei,2.0)/(ei);
+    sum+=chi_chi*UNIGRAM_WEIGHT;
   }
   return sum;
 }
 
 double chi_squared(int length, map<char,int> monograms, map<string,int> digrams){
   double sum = 0.0;
-  for(auto d : expected_d){
-    double ei = length*d.second*0.01;
-    double chi_chi = pow(digrams[d.first]-ei,2)/(ei);
-    sum+=chi_chi*.5;
+  for(int i=0; i<26; i++){
+    for(int j=0; j<26; j++){
+      string d = {(char)(i+'A'),(char)(j+'A')};
+      double ei = (double)length*expected_d[i][j]*0.01;
+      double chi_chi;
+      if(ei==0 || digrams.find(d)==digrams.end()){
+        continue;
+      }
+      else{
+        chi_chi = pow(digrams[d]-ei,2.0)/(ei);
+      }
+      sum+=(chi_chi*DIGRAM_WEIGHT);
+    }
   }
   return sum+chi_squared(length,monograms);
 }
 
 double chi_squared_playfair(int length, map<char,int> monograms, map<string,int> digrams){
   double sum = 0.0;
-  for(auto d : expected_d){
-    if(d.first[0]=='X' || d.first[1]=='X') continue;
-    double ei = length*d.second*0.01;
-    double chi_chi = pow(digrams[d.first]-ei,2)/(ei);
-    sum+=chi_chi*.5;
+  for(int i=0; i<26; i++){
+    if('A'+i=='X') continue;
+    for(int j=0; j<26; j++){
+      if('A'+j=='X') continue;
+      string d = {(char)(i+'A'),(char)(j+'A')};
+      double ei = (double)length*expected_d[i][j]*0.01;
+      double chi_chi;
+      if(ei==0 || digrams.find(d)==digrams.end()){
+        continue;
+      }
+      else{
+        chi_chi = pow(digrams[d]-ei,2.0)/(ei);
+      }
+      sum+=chi_chi*DIGRAM_WEIGHT;
+    }
   }
   return sum+chi_squared_playfair(length,monograms);
 }
 
 #ifdef TRIGRAMS_H
+double chi_squared_playfair(int length, map<char,int> monograms, map<string,int> digrams, map<string,int> trigrams){
+  double sum = 0.0;
+  for(int i=0; i<26; i++){
+    if(i+'A'=='X') continue;
+    for(int j=0; j<26; j++){
+      if(j+'A'=='X') continue;
+      for(int k=0; k<26; k++){
+        if(k+'A'=='X') continue;
+        string t = {(char)(i+'A'),(char)(j+'A'),(char)(k+'A')};
+        double ei = (double)length*expected_t[i][j][k]*0.01;
+        double chi_chi;
+        if(ei==0 || trigrams.find(t)==trigrams.end()){
+          continue;
+        }
+        else{
+          chi_chi = pow(trigrams[t]-ei,2.0)/(ei);
+        }
+        sum+=chi_chi*TRIGRAM_WEIGHT;
+      }
+    }
+  }
+  return sum+chi_squared_playfair(length,monograms,digrams);
+}
+
 double chi_squared(int length, map<char,int> monograms, map<string,int> digrams, map<string,int> trigrams){
   double sum = 0.0;
-  for(auto t : expected_t){
-    double ei = length*t.second*0.01;
-    double chi_chi = pow(trigrams[t.first]-ei,2)/(ei);
-    sum+=chi_chi*.5;
+  for(int i=0; i<26; i++){
+    for(int j=0; j<26; j++){
+      for(int k=0; k<26; k++){
+        string t = {(char)(i+'A'),(char)(j+'A'),(char)(k+'A')};
+        double ei = (double)length*expected_t[i][j][k]*0.01;
+        double chi_chi;
+        if(ei==0 || trigrams.find(t)==trigrams.end()){
+          continue;
+        }
+        else{
+          chi_chi = pow(trigrams[t]-ei,2.0)/(ei);
+        }
+        sum+=(chi_chi*TRIGRAM_WEIGHT);
+      }
+    }
   }
   return sum+chi_squared(length,monograms,digrams);
 }
 #endif
+
+double index_of_coincidence(int n, map<char,int> monograms){
+  double sum=0;
+  for(auto i : monograms){
+    sum+=i.second*(i.second-1);
+  }
+  return abs(sum*10000/(n*(n-1))-686);
+}
+int find_vigenere_key_length(string ciphertext){
+  int best_key_l = 0;
+  double best_key_f = 1e25;
+  for(int i=1; i<=10; i++){
+    double fitness_sum=0;
+    for(int j=0; j<i; j++){
+      string cipherchunk = "";
+      int size=0;
+      for(int k=j; k<ciphertext.length(); k+=i){
+        cipherchunk+=ciphertext[k];
+        size++;
+      }
+      //fitness_sum+=chi_squared(size,get_monogram_frequencies(cipherchunk));
+      fitness_sum+=index_of_coincidence(size,get_monogram_frequencies(cipherchunk));
+    }
+    if(fitness_sum/i < best_key_f){
+      best_key_f = fitness_sum/i;
+      best_key_l = i;
+    }
+    //cout << "DEBUG: key length " << i << " has fitness " << fitness_sum/i << endl;
+  }
+  return best_key_l;
+}

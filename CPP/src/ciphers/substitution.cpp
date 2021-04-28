@@ -2,6 +2,7 @@
 #include <iostream>
 #include <pagmo/types.hpp>
 #include <set>
+#include <cmath>
 
 using namespace std;
 
@@ -26,7 +27,7 @@ string dv_to_msub_key(const pagmo::vector_double &dv){
   int count=0;
   string key="";
   for(auto i : dv){
-    char c = (char)i+'A';
+    char c = int(i)+'A';
     if(used.find(c)==used.end()){
       key+=c;
       used.insert(c);
@@ -41,11 +42,22 @@ string dv_to_msub_key(const pagmo::vector_double &dv){
       }
     }
   }
+  for(;count<26;count++){
+    char c = (char)count+'A';
+    if(used.find(c)==used.end()){
+      key+=c;
+      used.insert(c);
+    }
+  }
   return key;
 }
 
 string substitute(string orig, const pagmo::vector_double &dv){
-  string key = dv_to_msub_key(dv);
+  //string key = dv_to_msub_key(dv);
+  string key = "";
+  for(auto i : dv){
+    key+=(char)int(i)+'A';
+  }
   return substitute(orig,key);
 }
 

@@ -11,10 +11,19 @@ int4096_t gcd(int4096_t a, int4096_t b);
 std::map<char,int> get_monogram_frequencies(std::string ciphertext); // from analysis.cpp
 std::map<std::string,int> get_digram_frequencies(std::string ciphertext); // from analysis.cpp
 std::map<std::string,int> get_trigram_frequencies(std::string ciphertext); // from analysis.cpp
+double index_of_coincidence(int,std::map<char,int>); //from analysis.cpp
+int find_vigenere_key_length(std::string); //from analysis.cpp
 
 unsigned int count_equal_bits(pagmo::vector_double,std::vector<std::byte>); // from keychecker.cpp
 
 std::string int_to_hex(int n); // from hexifier.cpp
+
+std::string columnar_encode(std::string,int[],int); //from columnar.cpp
+std::string columnar_decode(std::string,int[],int); //from columnar.cpp
+std::string columnar_decode(std::string,pagmo::vector_double); //from columnar.cpp
+
+std::string rail_fence_encode(std::string,int); //from rail_fence.cpp
+std::string rail_fence_decode(std::string,int); //from rail_fence.cpp
 
 bool test_substitutions(); //from substitution.cpp
 std::string substitute(std::string orig, std::string key);
