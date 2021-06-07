@@ -5,9 +5,9 @@
 #include "crypto_functions.h"
 #include <iostream>
 
-#define PRIME_BASE_SIZE 12
+#define PRIME_BASE_SIZE 4
 
-const int rsa_prime_base[PRIME_BASE_SIZE] = {2,3,5,7,11,13,17,19,23,29,31,37};
+const int rsa_prime_base[PRIME_BASE_SIZE] = {2,3,5,7};
 double chi_squared(int length, std::map<char,int> monograms, std::map<std::string,int> digrams,std::map<std::string,int> trigrams);
 double chi_squared_playfair(int length, std::map<char,int> monograms, std::map<std::string,int> digrams, std::map<std::string,int> trigrams);
 double van_vuuren(long int n, std::map<char,int> monograms);
@@ -50,7 +50,7 @@ double evaluate(std::string plaintext){
   std::map<char,int> m = get_monogram_frequencies(stripped);
   std::map<std::string,int> d = get_digram_frequencies(stripped);
   std::map<std::string,int> t = get_trigram_frequencies(stripped);
-  //return -van_vuuren(size,m);
+  //return van_vuuren(size,m);
   return chi_squared(size,m,d,t);
   return index_of_coincidence(size,m);
 }
@@ -73,14 +73,48 @@ int4096_t prime_vector_to_int(const pagmo::vector_double &dv,int offset){
 }
 
 double rsa_fitness(const pagmo::vector_double &dv, int4096_t n){
+  int4096_t xx = 1;
+  int4096_t yy = 1;
   int4096_t x = 1;
   int4096_t y = 1;
   for(int i=0; i<PRIME_BASE_SIZE; i++){
-    x=x * (int4096_t)pow(rsa_prime_base[i],2*dv[i]);
-    y=y * (int4096_t)pow(rsa_prime_base[i],2*dv[i+PRIME_BASE_SIZE]);
+    xx=xx * (int4096_t)pow(rsa_prime_base[i],2*round(dv[i]));
+    yy=yy * (int4096_t)pow(rsa_prime_base[i],2*round(dv[i+PRIME_BASE_SIZE]));
+    x=x * (int4096_t)pow(rsa_prime_base[i],round(dv[i]));
+    y=y * (int4096_t)pow(rsa_prime_base[i],round(dv[i+PRIME_BASE_SIZE]));
   }
-  int4096_t fitness = abs(x-y)%n;
+  if(x==1 || y==1) return 1e99;
+  if(x==y) return 1e99;
+  if(x+y==n) return 1e99;
+  int4096_t fitness = abs(xx-yy)%n;
   return (double)fitness;
+}
+
+double rsa_fitness_alternative(const pagmo::vector_double &dv, int4096_t n, int4096_t lb, int4096_t ub){
+  int4096_t x = 1;
+  for(int i=0; i<PRIME_BASE_SIZE; i++){
+    x=x * (int4096_t)pow(rsa_prime_base[i],round(dv[i]));
+    if(x>ub) return 1e99;
+  }
+  if(x==1 || x<lb) return 1e99;
+  int4096_t fitness = n % x;
+  return (double)fitness;
+}
+
+double rsa_fitness_houghten_rutkowski(const pagmo::vector_double &dv, int4096_t n){
+  int bits = dv.size();
+  //int4096_t m = 0;
+  int4096_t m = 1<<(bits);
+  for(int i=0; i<dv.size(); i++){
+    m+=int(round(dv[i]))<<(bits-i-1);
+  }
+  if(m==0 || m<100) return 1e99;
+  int4096_t p = 6*m+1;
+  int4096_t q = 6*m-1;
+  int4096_t x = n%p;
+  int4096_t y = n%q;
+  if(x<y) return double(x);
+  return double(y);
 }
 
 double ensure_sum_inequality(const pagmo::vector_double &dv, int4096_t n){
@@ -198,7 +232,7 @@ struct columnar_generic {
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
     return {
-      pagmo::vector_double(max_cols,0),pagmo::vector_double(max_cols,max_cols-1),
+      pagmo::vector_double(max_cols,-1),pagmo::vector_double(max_cols,max_cols-1),
     };
   }
 };
@@ -246,55 +280,55 @@ struct msub_constrained {
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
       evaluate(substitute(ciphertext,dv)),
-      double(dv[0]==dv[1] || dv[0]==dv[2] || dv[0]==dv[3] || dv[0]==dv[4] || dv[0]==dv[5] || dv[0]==dv[6] || dv[0]==dv[7] || dv[0]==dv[8] || dv[0]==dv[9] || dv[0]==dv[10] || dv[0]==dv[11] || dv[0]==dv[12] || dv[0]==dv[13] || dv[0]==dv[14] || dv[0]==dv[15] || dv[0]==dv[16] || dv[0]==dv[17] || dv[0]==dv[18] || dv[0]==dv[19] || dv[0]==dv[20] || dv[0]==dv[21] || dv[0]==dv[22] || dv[0]==dv[23] || dv[0]==dv[24] || dv[0]==dv[25]),
+      double(round(dv[0])==round(dv[1]) || round(dv[0])==round(dv[2]) || round(dv[0])==round(dv[3]) || round(dv[0])==round(dv[4]) || round(dv[0])==round(dv[5]) || round(dv[0])==round(dv[6]) || round(dv[0])==round(dv[7]) || round(dv[0])==round(dv[8]) || round(dv[0])==round(dv[9]) || round(dv[0])==round(dv[10]) || round(dv[0])==round(dv[11]) || round(dv[0])==round(dv[12]) || round(dv[0])==round(dv[13]) || round(dv[0])==round(dv[14]) || round(dv[0])==round(dv[15]) || round(dv[0])==round(dv[16]) || round(dv[0])==round(dv[17]) || round(dv[0])==round(dv[18]) || round(dv[0])==round(dv[19]) || round(dv[0])==round(dv[20]) || round(dv[0])==round(dv[21]) || round(dv[0])==round(dv[22]) || round(dv[0])==round(dv[23]) || round(dv[0])==round(dv[24]) || round(dv[0])==round(dv[25])),
 
-      double(dv[1]==dv[2] || dv[1]==dv[3] || dv[1]==dv[4] || dv[1]==dv[5] || dv[1]==dv[6] || dv[1]==dv[7] || dv[1]==dv[8] || dv[1]==dv[9] || dv[1]==dv[10] || dv[1]==dv[11] || dv[1]==dv[12] || dv[1]==dv[13] || dv[1]==dv[14] || dv[1]==dv[15] || dv[1]==dv[16] || dv[1]==dv[17] || dv[1]==dv[18] || dv[1]==dv[19] || dv[1]==dv[20] || dv[1]==dv[21] || dv[1]==dv[22] || dv[1]==dv[23] || dv[1]==dv[24] || dv[1]==dv[25]),
+      double(round(dv[1])==round(dv[2]) || round(dv[1])==round(dv[3]) || round(dv[1])==round(dv[4]) || round(dv[1])==round(dv[5]) || round(dv[1])==round(dv[6]) || round(dv[1])==round(dv[7]) || round(dv[1])==round(dv[8]) || round(dv[1])==round(dv[9]) || round(dv[1])==round(dv[10]) || round(dv[1])==round(dv[11]) || round(dv[1])==round(dv[12]) || round(dv[1])==round(dv[13]) || round(dv[1])==round(dv[14]) || round(dv[1])==round(dv[15]) || round(dv[1])==round(dv[16]) || round(dv[1])==round(dv[17]) || round(dv[1])==round(dv[18]) || round(dv[1])==round(dv[19]) || round(dv[1])==round(dv[20]) || round(dv[1])==round(dv[21]) || round(dv[1])==round(dv[22]) || round(dv[1])==round(dv[23]) || round(dv[1])==round(dv[24]) || round(dv[1])==round(dv[25])),
 
-      double(dv[2]==dv[3] || dv[2]==dv[4] || dv[2]==dv[5] || dv[2]==dv[6] || dv[2]==dv[7] || dv[2]==dv[8] || dv[2]==dv[9] || dv[2]==dv[10] || dv[2]==dv[11] || dv[2]==dv[12] || dv[2]==dv[13] || dv[2]==dv[14] || dv[2]==dv[15] || dv[2]==dv[16] || dv[2]==dv[17] || dv[2]==dv[18] || dv[2]==dv[19] || dv[2]==dv[20] || dv[2]==dv[21] || dv[2]==dv[22] || dv[2]==dv[23] || dv[2]==dv[24] || dv[2]==dv[25]),
+      double(round(dv[2])==round(dv[3]) || round(dv[2])==round(dv[4]) || round(dv[2])==round(dv[5]) || round(dv[2])==round(dv[6]) || round(dv[2])==round(dv[7]) || round(dv[2])==round(dv[8]) || round(dv[2])==round(dv[9]) || round(dv[2])==round(dv[10]) || round(dv[2])==round(dv[11]) || round(dv[2])==round(dv[12]) || round(dv[2])==round(dv[13]) || round(dv[2])==round(dv[14]) || round(dv[2])==round(dv[15]) || round(dv[2])==round(dv[16]) || round(dv[2])==round(dv[17]) || round(dv[2])==round(dv[18]) || round(dv[2])==round(dv[19]) || round(dv[2])==round(dv[20]) || round(dv[2])==round(dv[21]) || round(dv[2])==round(dv[22]) || round(dv[2])==round(dv[23]) || round(dv[2])==round(dv[24]) || round(dv[2])==round(dv[25])),
 
-      double(dv[3]==dv[4] || dv[3]==dv[5] || dv[3]==dv[6] || dv[3]==dv[7] || dv[3]==dv[8] || dv[3]==dv[9] || dv[3]==dv[10] || dv[3]==dv[11] || dv[3]==dv[12] || dv[3]==dv[13] || dv[3]==dv[14] || dv[3]==dv[15] || dv[3]==dv[16] || dv[3]==dv[17] || dv[3]==dv[18] || dv[3]==dv[19] || dv[3]==dv[20] || dv[3]==dv[21] || dv[3]==dv[22] || dv[3]==dv[23] || dv[3]==dv[24] || dv[3]==dv[25]),
+      double(round(dv[3])==round(dv[4]) || round(dv[3])==round(dv[5]) || round(dv[3])==round(dv[6]) || round(dv[3])==round(dv[7]) || round(dv[3])==round(dv[8]) || round(dv[3])==round(dv[9]) || round(dv[3])==round(dv[10]) || round(dv[3])==round(dv[11]) || round(dv[3])==round(dv[12]) || round(dv[3])==round(dv[13]) || round(dv[3])==round(dv[14]) || round(dv[3])==round(dv[15]) || round(dv[3])==round(dv[16]) || round(dv[3])==round(dv[17]) || round(dv[3])==round(dv[18]) || round(dv[3])==round(dv[19]) || round(dv[3])==round(dv[20]) || round(dv[3])==round(dv[21]) || round(dv[3])==round(dv[22]) || round(dv[3])==round(dv[23]) || round(dv[3])==round(dv[24]) || round(dv[3])==round(dv[25])),
 
-      double(dv[4]==dv[5] || dv[4]==dv[6] || dv[4]==dv[7] || dv[4]==dv[8] || dv[4]==dv[9] || dv[4]==dv[10] || dv[4]==dv[11] || dv[4]==dv[12] || dv[4]==dv[13] || dv[4]==dv[14] || dv[4]==dv[15] || dv[4]==dv[16] || dv[4]==dv[17] || dv[4]==dv[18] || dv[4]==dv[19] || dv[4]==dv[20] || dv[4]==dv[21] || dv[4]==dv[22] || dv[4]==dv[23] || dv[4]==dv[24] || dv[4]==dv[25]),
+      double(round(dv[4])==round(dv[5]) || round(dv[4])==round(dv[6]) || round(dv[4])==round(dv[7]) || round(dv[4])==round(dv[8]) || round(dv[4])==round(dv[9]) || round(dv[4])==round(dv[10]) || round(dv[4])==round(dv[11]) || round(dv[4])==round(dv[12]) || round(dv[4])==round(dv[13]) || round(dv[4])==round(dv[14]) || round(dv[4])==round(dv[15]) || round(dv[4])==round(dv[16]) || round(dv[4])==round(dv[17]) || round(dv[4])==round(dv[18]) || round(dv[4])==round(dv[19]) || round(dv[4])==round(dv[20]) || round(dv[4])==round(dv[21]) || round(dv[4])==round(dv[22]) || round(dv[4])==round(dv[23]) || round(dv[4])==round(dv[24]) || round(dv[4])==round(dv[25])),
 
-      double(dv[5]==dv[6] || dv[5]==dv[7] || dv[5]==dv[8] || dv[5]==dv[9] || dv[5]==dv[10] || dv[5]==dv[11] || dv[5]==dv[12] || dv[5]==dv[13] || dv[5]==dv[14] || dv[5]==dv[15] || dv[5]==dv[16] || dv[5]==dv[17] || dv[5]==dv[18] || dv[5]==dv[19] || dv[5]==dv[20] || dv[5]==dv[21] || dv[5]==dv[22] || dv[5]==dv[23] || dv[5]==dv[24] || dv[5]==dv[25]),
+      double(round(dv[5])==round(dv[6]) || round(dv[5])==round(dv[7]) || round(dv[5])==round(dv[8]) || round(dv[5])==round(dv[9]) || round(dv[5])==round(dv[10]) || round(dv[5])==round(dv[11]) || round(dv[5])==round(dv[12]) || round(dv[5])==round(dv[13]) || round(dv[5])==round(dv[14]) || round(dv[5])==round(dv[15]) || round(dv[5])==round(dv[16]) || round(dv[5])==round(dv[17]) || round(dv[5])==round(dv[18]) || round(dv[5])==round(dv[19]) || round(dv[5])==round(dv[20]) || round(dv[5])==round(dv[21]) || round(dv[5])==round(dv[22]) || round(dv[5])==round(dv[23]) || round(dv[5])==round(dv[24]) || round(dv[5])==round(dv[25])),
 
-      double(dv[6]==dv[7] || dv[6]==dv[8] || dv[6]==dv[9] || dv[6]==dv[10] || dv[6]==dv[11] || dv[6]==dv[12] || dv[6]==dv[13] || dv[6]==dv[14] || dv[6]==dv[15] || dv[6]==dv[16] || dv[6]==dv[17] || dv[6]==dv[18] || dv[6]==dv[19] || dv[6]==dv[20] || dv[6]==dv[21] || dv[6]==dv[22] || dv[6]==dv[23] || dv[6]==dv[24] || dv[6]==dv[25]),
+      double(round(dv[6])==round(dv[7]) || round(dv[6])==round(dv[8]) || round(dv[6])==round(dv[9]) || round(dv[6])==round(dv[10]) || round(dv[6])==round(dv[11]) || round(dv[6])==round(dv[12]) || round(dv[6])==round(dv[13]) || round(dv[6])==round(dv[14]) || round(dv[6])==round(dv[15]) || round(dv[6])==round(dv[16]) || round(dv[6])==round(dv[17]) || round(dv[6])==round(dv[18]) || round(dv[6])==round(dv[19]) || round(dv[6])==round(dv[20]) || round(dv[6])==round(dv[21]) || round(dv[6])==round(dv[22]) || round(dv[6])==round(dv[23]) || round(dv[6])==round(dv[24]) || round(dv[6])==round(dv[25])),
 
-      double(dv[7]==dv[8] || dv[7]==dv[9] || dv[7]==dv[10] || dv[7]==dv[11] || dv[7]==dv[12] || dv[7]==dv[13] || dv[7]==dv[14] || dv[7]==dv[15] || dv[7]==dv[16] || dv[7]==dv[17] || dv[7]==dv[18] || dv[7]==dv[19] || dv[7]==dv[20] || dv[7]==dv[21] || dv[7]==dv[22] || dv[7]==dv[23] || dv[7]==dv[24] || dv[7]==dv[25]),
+      double(round(dv[7])==round(dv[8]) || round(dv[7])==round(dv[9]) || round(dv[7])==round(dv[10]) || round(dv[7])==round(dv[11]) || round(dv[7])==round(dv[12]) || round(dv[7])==round(dv[13]) || round(dv[7])==round(dv[14]) || round(dv[7])==round(dv[15]) || round(dv[7])==round(dv[16]) || round(dv[7])==round(dv[17]) || round(dv[7])==round(dv[18]) || round(dv[7])==round(dv[19]) || round(dv[7])==round(dv[20]) || round(dv[7])==round(dv[21]) || round(dv[7])==round(dv[22]) || round(dv[7])==round(dv[23]) || round(dv[7])==round(dv[24]) || round(dv[7])==round(dv[25])),
 
-      double(dv[8]==dv[9] || dv[8]==dv[10] || dv[8]==dv[11] || dv[8]==dv[12] || dv[8]==dv[13] || dv[8]==dv[14] || dv[8]==dv[15] || dv[8]==dv[16] || dv[8]==dv[17] || dv[8]==dv[18] || dv[8]==dv[19] || dv[8]==dv[20] || dv[8]==dv[21] || dv[8]==dv[22] || dv[8]==dv[23] || dv[8]==dv[24] || dv[8]==dv[25]),
+      double(round(dv[8])==round(dv[9]) || round(dv[8])==round(dv[10]) || round(dv[8])==round(dv[11]) || round(dv[8])==round(dv[12]) || round(dv[8])==round(dv[13]) || round(dv[8])==round(dv[14]) || round(dv[8])==round(dv[15]) || round(dv[8])==round(dv[16]) || round(dv[8])==round(dv[17]) || round(dv[8])==round(dv[18]) || round(dv[8])==round(dv[19]) || round(dv[8])==round(dv[20]) || round(dv[8])==round(dv[21]) || round(dv[8])==round(dv[22]) || round(dv[8])==round(dv[23]) || round(dv[8])==round(dv[24]) || round(dv[8])==round(dv[25])),
 
-      double(dv[9]==dv[10] || dv[9]==dv[11] || dv[9]==dv[12] || dv[9]==dv[13] || dv[9]==dv[14] || dv[9]==dv[15] || dv[9]==dv[16] || dv[9]==dv[17] || dv[9]==dv[18] || dv[9]==dv[19] || dv[9]==dv[20] || dv[9]==dv[21] || dv[9]==dv[22] || dv[9]==dv[23] || dv[9]==dv[24] || dv[9]==dv[25]),
+      double(round(dv[9])==round(dv[10]) || round(dv[9])==round(dv[11]) || round(dv[9])==round(dv[12]) || round(dv[9])==round(dv[13]) || round(dv[9])==round(dv[14]) || round(dv[9])==round(dv[15]) || round(dv[9])==round(dv[16]) || round(dv[9])==round(dv[17]) || round(dv[9])==round(dv[18]) || round(dv[9])==round(dv[19]) || round(dv[9])==round(dv[20]) || round(dv[9])==round(dv[21]) || round(dv[9])==round(dv[22]) || round(dv[9])==round(dv[23]) || round(dv[9])==round(dv[24]) || round(dv[9])==round(dv[25])),
 
-      double(dv[10]==dv[11] || dv[10]==dv[12] || dv[10]==dv[13] || dv[10]==dv[14] || dv[10]==dv[15] || dv[10]==dv[16] || dv[10]==dv[17] || dv[10]==dv[18] || dv[10]==dv[19] || dv[10]==dv[20] || dv[10]==dv[21] || dv[10]==dv[22] || dv[10]==dv[23] || dv[10]==dv[24] || dv[10]==dv[25]),
+      double(round(dv[10])==round(dv[11]) || round(dv[10])==round(dv[12]) || round(dv[10])==round(dv[13]) || round(dv[10])==round(dv[14]) || round(dv[10])==round(dv[15]) || round(dv[10])==round(dv[16]) || round(dv[10])==round(dv[17]) || round(dv[10])==round(dv[18]) || round(dv[10])==round(dv[19]) || round(dv[10])==round(dv[20]) || round(dv[10])==round(dv[21]) || round(dv[10])==round(dv[22]) || round(dv[10])==round(dv[23]) || round(dv[10])==round(dv[24]) || round(dv[10])==round(dv[25])),
 
-      double(dv[11]==dv[12] || dv[11]==dv[13] || dv[11]==dv[14] || dv[11]==dv[15] || dv[11]==dv[16] || dv[11]==dv[17] || dv[11]==dv[18] || dv[11]==dv[19] || dv[11]==dv[20] || dv[11]==dv[21] || dv[11]==dv[22] || dv[11]==dv[23] || dv[11]==dv[24] || dv[11]==dv[25]),
+      double(round(dv[11])==round(dv[12]) || round(dv[11])==round(dv[13]) || round(dv[11])==round(dv[14]) || round(dv[11])==round(dv[15]) || round(dv[11])==round(dv[16]) || round(dv[11])==round(dv[17]) || round(dv[11])==round(dv[18]) || round(dv[11])==round(dv[19]) || round(dv[11])==round(dv[20]) || round(dv[11])==round(dv[21]) || round(dv[11])==round(dv[22]) || round(dv[11])==round(dv[23]) || round(dv[11])==round(dv[24]) || round(dv[11])==round(dv[25])),
 
-      double(dv[12]==dv[13] || dv[12]==dv[14] || dv[12]==dv[15] || dv[12]==dv[16] || dv[12]==dv[17] || dv[12]==dv[18] || dv[12]==dv[19] || dv[12]==dv[20] || dv[12]==dv[21] || dv[12]==dv[22] || dv[12]==dv[23] || dv[12]==dv[24] || dv[12]==dv[25]),
+      double(round(dv[12])==round(dv[13]) || round(dv[12])==round(dv[14]) || round(dv[12])==round(dv[15]) || round(dv[12])==round(dv[16]) || round(dv[12])==round(dv[17]) || round(dv[12])==round(dv[18]) || round(dv[12])==round(dv[19]) || round(dv[12])==round(dv[20]) || round(dv[12])==round(dv[21]) || round(dv[12])==round(dv[22]) || round(dv[12])==round(dv[23]) || round(dv[12])==round(dv[24]) || round(dv[12])==round(dv[25])),
 
-      double(dv[13]==dv[14] || dv[13]==dv[15] || dv[13]==dv[16] || dv[13]==dv[17] || dv[13]==dv[18] || dv[13]==dv[19] || dv[13]==dv[20] || dv[13]==dv[21] || dv[13]==dv[22] || dv[13]==dv[23] || dv[13]==dv[24] || dv[13]==dv[25]),
+      double(round(dv[13])==round(dv[14]) || round(dv[13])==round(dv[15]) || round(dv[13])==round(dv[16]) || round(dv[13])==round(dv[17]) || round(dv[13])==round(dv[18]) || round(dv[13])==round(dv[19]) || round(dv[13])==round(dv[20]) || round(dv[13])==round(dv[21]) || round(dv[13])==round(dv[22]) || round(dv[13])==round(dv[23]) || round(dv[13])==round(dv[24]) || round(dv[13])==round(dv[25])),
 
-      double(dv[14]==dv[15] || dv[14]==dv[16] || dv[14]==dv[17] || dv[14]==dv[18] || dv[14]==dv[19] || dv[14]==dv[20] || dv[14]==dv[21] || dv[14]==dv[22] || dv[14]==dv[23] || dv[14]==dv[24] || dv[14]==dv[25]),
+      double(round(dv[14])==round(dv[15]) || round(dv[14])==round(dv[16]) || round(dv[14])==round(dv[17]) || round(dv[14])==round(dv[18]) || round(dv[14])==round(dv[19]) || round(dv[14])==round(dv[20]) || round(dv[14])==round(dv[21]) || round(dv[14])==round(dv[22]) || round(dv[14])==round(dv[23]) || round(dv[14])==round(dv[24]) || round(dv[14])==round(dv[25])),
 
-      double(dv[15]==dv[16] || dv[15]==dv[17] || dv[15]==dv[18] || dv[15]==dv[19] || dv[15]==dv[20] || dv[15]==dv[21] || dv[15]==dv[22] || dv[15]==dv[23] || dv[15]==dv[24] || dv[15]==dv[25]),
+      double(round(dv[15])==round(dv[16]) || round(dv[15])==round(dv[17]) || round(dv[15])==round(dv[18]) || round(dv[15])==round(dv[19]) || round(dv[15])==round(dv[20]) || round(dv[15])==round(dv[21]) || round(dv[15])==round(dv[22]) || round(dv[15])==round(dv[23]) || round(dv[15])==round(dv[24]) || round(dv[15])==round(dv[25])),
 
-      double(dv[16]==dv[17] || dv[16]==dv[18] || dv[16]==dv[19] || dv[16]==dv[20] || dv[16]==dv[21] || dv[16]==dv[22] || dv[16]==dv[23] || dv[16]==dv[24] || dv[16]==dv[25]),
+      double(round(dv[16])==round(dv[17]) || round(dv[16])==round(dv[18]) || round(dv[16])==round(dv[19]) || round(dv[16])==round(dv[20]) || round(dv[16])==round(dv[21]) || round(dv[16])==round(dv[22]) || round(dv[16])==round(dv[23]) || round(dv[16])==round(dv[24]) || round(dv[16])==round(dv[25])),
 
-      double(dv[17]==dv[18] || dv[17]==dv[19] || dv[17]==dv[20] || dv[17]==dv[21] || dv[17]==dv[22] || dv[17]==dv[23] || dv[17]==dv[24] || dv[17]==dv[25]),
+      double(round(dv[17])==round(dv[18]) || round(dv[17])==round(dv[19]) || round(dv[17])==round(dv[20]) || round(dv[17])==round(dv[21]) || round(dv[17])==round(dv[22]) || round(dv[17])==round(dv[23]) || round(dv[17])==round(dv[24]) || round(dv[17])==round(dv[25])),
 
-      double(dv[18]==dv[19] || dv[18]==dv[20] || dv[18]==dv[21] || dv[18]==dv[22] || dv[18]==dv[23] || dv[18]==dv[24] || dv[18]==dv[25]),
+      double(round(dv[18])==round(dv[19]) || round(dv[18])==round(dv[20]) || round(dv[18])==round(dv[21]) || round(dv[18])==round(dv[22]) || round(dv[18])==round(dv[23]) || round(dv[18])==round(dv[24]) || round(dv[18])==round(dv[25])),
 
-      double(dv[19]==dv[20] || dv[19]==dv[21] || dv[19]==dv[22] || dv[19]==dv[23] || dv[19]==dv[24] || dv[19]==dv[25]),
+      double(round(dv[19])==round(dv[20]) || round(dv[19])==round(dv[21]) || round(dv[19])==round(dv[22]) || round(dv[19])==round(dv[23]) || round(dv[19])==round(dv[24]) || round(dv[19])==round(dv[25])),
 
-      double(dv[20]==dv[21] || dv[20]==dv[22] || dv[20]==dv[23] || dv[20]==dv[24] || dv[20]==dv[25]),
+      double(round(dv[20])==round(dv[21]) || round(dv[20])==round(dv[22]) || round(dv[20])==round(dv[23]) || round(dv[20])==round(dv[24]) || round(dv[20])==round(dv[25])),
 
-      double(dv[21]==dv[22] || dv[21]==dv[23] || dv[21]==dv[24] || dv[21]==dv[25]),
+      double(round(dv[21])==round(dv[22]) || round(dv[21])==round(dv[23]) || round(dv[21])==round(dv[24]) || round(dv[21])==round(dv[25])),
 
-      double(dv[22]==dv[23] || dv[22]==dv[24] || dv[22]==dv[25]),
+      double(round(dv[22])==round(dv[23]) || round(dv[22])==round(dv[24]) || round(dv[22])==round(dv[25])),
 
-      double(dv[23]==dv[24] || dv[23]==dv[25]),
+      double(round(dv[23])==round(dv[24]) || round(dv[23])==round(dv[25])),
 
-      double(dv[24]==dv[25])
+      double(round(dv[24])==round(dv[25]))
     };
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
@@ -335,7 +369,7 @@ struct vigenere_generic {
 struct playfair_generic {
   std::string ciphertext;
   pagmo::vector_double::size_type get_nix() const{
-    return 15;
+    return 25;
   }
   pagmo::vector_double::size_type get_ncx() const{
     return 0;
@@ -403,7 +437,7 @@ struct playfair_generic {
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
     return {
-      pagmo::vector_double(15,0),pagmo::vector_double(15,25),
+      pagmo::vector_double(25,0),pagmo::vector_double(25,24),
     };
   }
 };
@@ -437,24 +471,89 @@ struct rsa_factor {
     return 2*PRIME_BASE_SIZE;
   }
   pagmo::vector_double::size_type get_nec() const{
-    return 2;
+    return 0;
   }
   pagmo::vector_double::size_type get_nic() const{
-    return 2;
+    return 0;
   }
   pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
     return {
       rsa_fitness(dv,n), //objective function
+      /*
       ensure_sum_inequality(dv,n), //(x+y!=n)
       ensure_non_trivial(dv,n),
       double(prime_vector_to_int(dv,0)-n),
       double(prime_vector_to_int(dv,PRIME_BASE_SIZE)-n),
       //ensure_inequality(dv,n), //inequality constraint (x<y)
+      */
     };
   }
   std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
     return {
-      pagmo::vector_double(2*PRIME_BASE_SIZE,0),pagmo::vector_double(2*PRIME_BASE_SIZE,10),
+      pagmo::vector_double(2*PRIME_BASE_SIZE,0),pagmo::vector_double(2*PRIME_BASE_SIZE,5),
+    };
+  }
+};
+
+struct rsa_factor_alternative {
+  int4096_t n;
+  int4096_t lb;
+  int4096_t ub;
+  pagmo::vector_double::size_type get_nix() const{
+    return PRIME_BASE_SIZE;
+  }
+  pagmo::vector_double::size_type get_nec() const{
+    return 0;
+  }
+  pagmo::vector_double::size_type get_nic() const{
+    return 0;
+  }
+  pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
+    return {
+      rsa_fitness_alternative(dv,n,lb,ub), //objective function
+      /*
+      ensure_sum_inequality(dv,n), //(x+y!=n)
+      ensure_non_trivial(dv,n),
+      double(prime_vector_to_int(dv,0)-n),
+      double(prime_vector_to_int(dv,PRIME_BASE_SIZE)-n),
+      //ensure_inequality(dv,n), //inequality constraint (x<y)
+      */
+    };
+  }
+  std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
+    return {
+      pagmo::vector_double(PRIME_BASE_SIZE,0),pagmo::vector_double(PRIME_BASE_SIZE,5),
+    };
+  }
+};
+
+struct rsa_rutkowski_houghten {
+  int4096_t n;
+  int bits;
+  pagmo::vector_double::size_type get_nix() const{
+    return bits;
+  }
+  pagmo::vector_double::size_type get_nec() const{
+    return 0;
+  }
+  pagmo::vector_double::size_type get_nic() const{
+    return 0;
+  }
+  pagmo::vector_double fitness(const pagmo::vector_double &dv) const{
+    return {
+      rsa_fitness_houghten_rutkowski(dv,n), //objective function
+      /*
+      ensure_sum_inequality(dv,n), //(x+y!=n)
+      ensure_non_trivial(dv,n),
+      double(prime_vector_to_int(dv,0)-n),
+      double(prime_vector_to_int(dv,PRIME_BASE_SIZE)-n),
+      //ensure_inequality(dv,n), //inequality constraint (x<y)
+      */
+    };
+  }
+  std::pair<pagmo::vector_double,pagmo::vector_double> get_bounds() const{
+    return {
+      pagmo::vector_double(bits,0),pagmo::vector_double(bits,1),
     };
   }
 };

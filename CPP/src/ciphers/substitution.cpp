@@ -27,7 +27,7 @@ string dv_to_msub_key(const pagmo::vector_double &dv){
   int count=0;
   string key="";
   for(auto i : dv){
-    char c = int(i)+'A';
+    char c = round(i)+'A';
     if(used.find(c)==used.end()){
       key+=c;
       used.insert(c);
@@ -53,11 +53,11 @@ string dv_to_msub_key(const pagmo::vector_double &dv){
 }
 
 string substitute(string orig, const pagmo::vector_double &dv){
-  //string key = dv_to_msub_key(dv);
   string key = "";
   for(auto i : dv){
-    key+=(char)int(i)+'A';
+    key+=(char)round(i)+'A';
   }
+  //string key = dv_to_msub_key(dv);
   return substitute(orig,key);
 }
 

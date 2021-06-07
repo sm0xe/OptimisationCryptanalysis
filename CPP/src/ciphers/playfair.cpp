@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include <string>
 #include <set>
 #include <pagmo/types.hpp>
@@ -107,7 +108,7 @@ string dv_to_pf_key(const pagmo::vector_double &dv){
   int count=0;
   string key="";
   for(auto i : dv){
-    char c = (char)i + 'A';
+    char c = (char)round(i) + 'A';
     if(used.find(c)==used.end()){
       key+=c;
       used.insert(c);

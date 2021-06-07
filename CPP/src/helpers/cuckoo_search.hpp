@@ -1,5 +1,5 @@
-#ifndef PAGMO_ALGORITHMS_DE_HPP
-#define PAGMO_ALGORITHMS_DE_HPP
+#ifndef PAGMO_ALGORITHMS_CUCKOO_HPP
+#define PAGMO_ALGORITHMS_CUCKOO_HPP
 #include <string>
 #include <tuple>
 #include <vector>

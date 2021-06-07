@@ -21,6 +21,7 @@ std::string int_to_hex(int n); // from hexifier.cpp
 std::string columnar_encode(std::string,int[],int); //from columnar.cpp
 std::string columnar_decode(std::string,int[],int); //from columnar.cpp
 std::string columnar_decode(std::string,pagmo::vector_double); //from columnar.cpp
+pagmo::vector_double columnar_key_from_dv(pagmo::vector_double); //from columnar.cpp
 
 std::string rail_fence_encode(std::string,int); //from rail_fence.cpp
 std::string rail_fence_decode(std::string,int); //from rail_fence.cpp

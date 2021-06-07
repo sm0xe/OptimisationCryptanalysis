@@ -45,21 +45,66 @@ string columnar_decode(string ciphertext, int col_order[], int cols){
   return plaintext;
 }
 
+pagmo::vector_double columnar_key_from_dv(pagmo::vector_double dv){
+  pagmo::vector_double key_vector;
+  map<int,int> keyMap;
+  int index=0;
+  for(int i=0; i<dv.size(); i++){
+    if(round(dv[i])==-1) break;
+    if(keyMap.find(int(round(dv[i])))==keyMap.end()){
+      keyMap[int(round(dv[i]))]=index++;
+      //std::cout << "keyMap["<<int(round(dv[i]))<<"]="<<index-1 << endl;
+      key_vector.push_back(int(round(dv[i])));
+    }
+  }
+  int min_i=0;
+  int min_x=key_vector[0];
+  for(int i=1; i<key_vector.size(); i++){
+    if(key_vector[i]<min_x){
+      min_i=i;
+      min_x=key_vector[i];
+    }
+  }
+  key_vector[min_i]=0;
+  bool relaxed=true;
+  while(relaxed==true){
+    relaxed = false;
+    for(int i=0; i<key_vector.size(); i++){
+      int smallest_diff=50;
+      for(int j=0; j<key_vector.size(); j++){
+        if(i==j) continue;
+        if(key_vector[i]>key_vector[j]){
+          if(key_vector[i]-key_vector[j]<smallest_diff){
+            smallest_diff = key_vector[i]-key_vector[j];
+          }
+        }
+      }
+      if(smallest_diff>1 && smallest_diff<50){
+        key_vector[i]=key_vector[i]-smallest_diff+1;
+        relaxed=true;
+      }
+    }
+  }
+  return key_vector;
+}
+
 string columnar_decode(string ciphertext, pagmo::vector_double dv){
   string plaintext = "";
   map<int,int> keyMap;
   int index=0;
+  if(int(round(dv[0]))==-1 || int(round(dv[1]))==-1) return ciphertext;
   for(int i=0; i<dv.size(); i++){
+    if(round(dv[i])==-1) break;
     if(keyMap.find(int(round(dv[i])))==keyMap.end()){
       keyMap[int(round(dv[i]))]=index++;
-      //std::cout << "keyMap[round("<<dv[i]<<")]="<<index-1 << endl;
+      //std::cout << "keyMap["<<int(round(dv[i]))<<"]="<<index-1 << endl;
     }
   }
   /*
   for(int i=0; i<dv.size(); i++){
     if(keyMap.find(i)==keyMap.end()){
       keyMap[i]=index++;
-      //std::cout << "keyMap["<<i<<"]="<<index-1 << endl;
+      std::cout << "keyMap["<<i<<"]="<<index-1 << endl;
     }
   }
   */

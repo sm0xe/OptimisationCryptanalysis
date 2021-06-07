@@ -103,7 +103,7 @@ double van_vuuren(long int n, std::map<char,int> monograms){
   for(int i=0; i<26; i++){
     double expected = (double)n*expected_m[i]*0.01;
     if(p_min>expected) p_min=expected;
-    sum+=abs(expected-monograms[i]);
+    sum+=abs(expected-monograms[(char)i+'A']);
   }
   return (2*((double)n-p_min)-sum)/(2*((double)n-p_min));
 }
@@ -113,7 +113,7 @@ double chi_squared(int length, map<char,int> monograms){
   double sum = 0.0;
   for(int i=0; i<26; i++){
     double ei = (double)length*expected_m[i]*0.01;
-    double chi_chi = pow(monograms[i]-ei,2.0)/(ei);
+    double chi_chi = pow(monograms[(char)i+'A']-ei,2.0)/(ei);
     sum+=(chi_chi*UNIGRAM_WEIGHT);
   }
   return sum;
@@ -124,7 +124,7 @@ double chi_squared_playfair(int length, map<char,int> monograms){
   for(int i=0; i<26; i++){
     if(i+'A'=='X') continue;
     double ei = (double)length*expected_m[i]*0.01;
-    double chi_chi = pow(monograms[i]-ei,2.0)/(ei);
+    double chi_chi = pow(monograms[(char)i+'A']-ei,2.0)/(ei);
     sum+=chi_chi*UNIGRAM_WEIGHT;
   }
   return sum;
